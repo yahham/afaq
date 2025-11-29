@@ -1,9 +1,59 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import React from "react";
+import {
+    View,
+    Text,
+    Image,
+    TouchableOpacity,
+    StyleSheet,
+    Alert,
+} from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import { useOAuth } from "@clerk/clerk-expo";
+import * as Linking from "expo-linking";
+
 import Colors from "../utils/Colors";
 import app from "../../assets/images/login-01.jpg";
 import google from "../../assets/images/google.png";
 
+// This warms up the browser on Android to make the sign-in faster
+export const useWarmUpBrowser = () => {
+    React.useEffect(() => {
+        void WebBrowser.warmUpAsync();
+        return () => {
+            void WebBrowser.coolDownAsync();
+        };
+    }, []);
+};
+
+WebBrowser.maybeCompleteAuthSession();
+
 export default function Login() {
+    useWarmUpBrowser();
+
+    // Select the strategy (Google)
+    const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+
+    const onSignInPress = React.useCallback(async () => {
+        try {
+            const { createdSessionId, signIn, signUp, setActive } =
+                await startOAuthFlow({
+                    redirectUrl: Linking.createURL("/dashboard", {
+                        scheme: "myapp",
+                    }),
+                });
+
+            if (createdSessionId) {
+                // Login successful, set the active session
+                setActive({ session: createdSessionId });
+            } else {
+                // Use signIn or signUp for next steps such as MFA (rare for Google Auth)
+            }
+        } catch (err) {
+            console.error("OAuth error", err);
+            Alert.alert("Error", "Login failed. Please try again.");
+        }
+    }, []);
+
     return (
         <View style={styles.container}>
             <Image source={app} style={styles.heroImage} />
@@ -15,7 +65,11 @@ export default function Login() {
                     Master Programming Through{"\n"}Self-Regulated Learning
                 </Text>
 
-                <TouchableOpacity style={styles.signInButton}>
+                <TouchableOpacity
+                    style={styles.signInButton}
+                    onPress={onSignInPress} // Attach the function here
+                    activeOpacity={0.8}
+                >
                     <Image source={google} style={styles.googleIcon} />
                     <Text style={styles.signInText}>Sign In with Google</Text>
                 </TouchableOpacity>
@@ -40,7 +94,7 @@ const styles = StyleSheet.create({
     },
     contentCard: {
         flex: 1,
-        backgroundColor: Colors.primary,
+        backgroundColor: Colors.primary, // Ensure this exists in your Colors.js
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
         marginTop: -30,
@@ -50,7 +104,7 @@ const styles = StyleSheet.create({
     },
     appName: {
         fontSize: 48,
-        color: Colors.textInverse,
+        color: Colors.textInverse, // Ensure this exists
         fontFamily: "Inter-ExtraBold",
         marginBottom: 15,
     },
@@ -66,7 +120,7 @@ const styles = StyleSheet.create({
     signInButton: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: Colors.accentLight,
+        backgroundColor: Colors.accentLight, // Ensure this exists
         paddingVertical: 16,
         paddingHorizontal: 30,
         borderRadius: 50,
@@ -88,7 +142,7 @@ const styles = StyleSheet.create({
     },
     signInText: {
         fontSize: 17,
-        color: Colors.textPrimary,
+        color: Colors.textPrimary, // Ensure this exists
         fontFamily: "Inter-SemiBold",
     },
     footerText: {
